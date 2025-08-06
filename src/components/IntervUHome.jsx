@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Briefcase, UserCheck, FileText, Mic, BookOpen, Globe } from "lucide-react";
-import Navbar from "./navbar";
+import Navbar from "./Navbar";
 import Footer from "./Footer";
 
 // Basic Card component
