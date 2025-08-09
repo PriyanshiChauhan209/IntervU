@@ -3,6 +3,7 @@ import React from "react";
 import Navbar from "./Navbar";
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useUser } from '@clerk/clerk-react';
 
 
 import {
@@ -13,17 +14,116 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { LoaderCircle } from "lucide-react";
 
 const Dashboard = () => {
   const [openDialog, setOpenDialog] = React.useState(false); // ✅ Corrected
   const[jobPosition,setJobPosition]=  React.useState();
   const[jobDesc,setJobDesc]=  React.useState();
   const[jobExp,setJobExp]=  React.useState();
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const [jsonResponse, setJsonResponse] = React.useState([]);
+  const {user}=useUser();
 
-  const onSubmit=(e)=>{
-    e.preventDefault()
-console.log(jobDesc,jobPosition,jobExp)
+
+const onSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setJsonResponse([]);
+
+  const prompt = `Job Position: ${jobPosition}, Job Description: ${jobDesc}, Year of experience: ${jobExp}, Depend on this Information please give 5 Interview Questions with answer in JSON format with question and answer fields.`;
+
+  try {
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-goog-api-key': import.meta.env.VITE_GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API error: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    console.log('Full API response:', data);
+
+    const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let MockResponse = responseText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    // Remove control characters that break JSON parsing
+    MockResponse = MockResponse.replace(/[\u0000-\u0019]+/g, '');
+
+    const jsonMatch = MockResponse.match(/\[.*\]/s);
+
+    if (!jsonMatch) throw new Error('Could not parse JSON from response');
+
+    let parsedQuestions = null;
+    try {
+      parsedQuestions = JSON.parse(jsonMatch[0]);
+      if (!parsedQuestions || !Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
+        setError('No valid interview questions generated. Please try again.');
+        setLoading(false);
+        return;
+      }
+      setJsonResponse(parsedQuestions);
+    } catch (e) {
+      console.error('Failed to parse JSON:', e);
+      console.log('JSON string:', jsonMatch[0]);
+      setError('Failed to parse interview questions JSON. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    // Send data to your backend API to save it in DB
+    const saveResponse = await fetch('http://localhost:4000/api/saveInterview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobPosition,
+        jobDesc,
+        jobExp,
+        questions: parsedQuestions,
+        createdBy: user?.primaryEmailAddress?.emailAddress, // or get from user session/auth
+      }),
+    });
+
+    if (!saveResponse.ok) {
+      const errData = await saveResponse.json();
+      throw new Error(errData.message || 'Failed to save interview data');
+    }
+//mockid retun
+    const saveData = await saveResponse.json();
+    console.log('Data saved to database successfully!', saveData.mockId);
+
+  } catch (err) {
+    setError(err.message);
+    console.error('Error:', err);
+  } finally {
+    setLoading(false);
   }
+};
+
+
+
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-primary dark:text-white transition-colors duration-300">
       {/* Top Navbar */}
@@ -92,11 +192,16 @@ console.log(jobDesc,jobPosition,jobExp)
       <button type="button" onClick={() => setOpenDialog(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700">
         Cancel
       </button>
-      <button type="submit" className="bg-primary text-white px-4 py-2 rounded">
-        Start Interview
+      <button type="submit" className="bg-primary text-white px-4 py-2 rounded" disabled={loading}>
+        {loading?
+         <span className="flex items-center gap-2">
+    <LoaderCircle className="animate-spin" />
+    Generating
+  </span>:'Start Interview'}
       </button>
     </div>
   </form>
+  
 </DialogContent>
           </Dialog>
         </div>

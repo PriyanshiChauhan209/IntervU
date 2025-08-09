@@ -20,6 +20,6 @@
     // Node support
     "types": ["node"]
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "db/db.js", "db/schema.js", "server.js"],
   "exclude": ["node_modules"]
 }
