@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Briefcase, UserCheck, FileText, Mic, BookOpen, Globe } from "lucide-react";
-import Navbar from "./Navbar";
+// import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useNavigate } from "react-router-dom"; // ✅ import useNavigate
 
@@ -67,7 +67,7 @@ export default function IntervUHome() {
 
   return (
     <div className="min-h-screen bg-white text-primary dark:bg-gray-900 dark:text-white transition-colors duration-300">
-      <Navbar />
+      {/* <Navbar /> */}
 
       <main className="min-h-screen bg-white dark:bg-gray-900 px-6 py-12 transition-colors duration-300">
         <div className="max-w-7xl mx-auto text-center">
