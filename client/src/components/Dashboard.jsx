@@ -96,7 +96,7 @@ const Dashboard = () => {
       }
 
       const saveResponse = await fetch(
-        "http://localhost:4000/api/saveInterview",
+         "http://localhost:4000/api/interviews/saveinterview",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
