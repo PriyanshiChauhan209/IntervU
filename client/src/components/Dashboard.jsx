@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
+import { sendMessage } from "@/lib/GeminiAiModel";
 
 import {
   Dialog,
@@ -27,42 +28,34 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const onSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setJsonResponse([]);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setJsonResponse([]);
 
-    const prompt = `Job Position: ${jobPosition}, Job Description: ${jobDesc}, Year of experience: ${jobExp}, Depend on this Information please give 5 Interview Questions with answer in JSON format with question and answer fields.`;
+  const questionCount =
+    import.meta.env.VITE_INTERVIEW_QUESTION_COUNT || 2;
 
-    try {
-      const response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-goog-api-key": import.meta.env.VITE_GEMINI_API_KEY,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }],
-              },
-            ],
-          }),
-        }
-      );
+  const prompt = `
+Job Position: ${jobPosition}
+Job Description: ${jobDesc}
+Years of Experience: ${jobExp}
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`API error: ${response.status} - ${errText}`);
-      }
+Generate ${questionCount} interview questions with answers.
 
-      const data = await response.json();
-      console.log("Full API response:", data);
+Return strictly valid JSON array format only:
 
-      const responseText =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+[
+  {
+    "question": "string",
+    "answer": "string"
+  }
+]
+`;
+
+  try {
+    const responseText = await sendMessage(prompt);
+
       let MockResponse = responseText
         .replace(/```json/g, "")
         .replace(/```/g, "")
@@ -120,7 +113,7 @@ const Dashboard = () => {
 
       if (saveData?.mockId) {
         setOpenDialog(false);
-        navigate("/components/dashboard/Interview/" + saveData.mockId);
+        navigate("/dashboard/interview/" + saveData.mockId);
       }
     } catch (err) {
       setError(err.message);

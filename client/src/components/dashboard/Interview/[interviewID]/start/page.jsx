@@ -27,7 +27,7 @@ function StartInterview() {
 
       try {
         const res = await fetch(
-          `http://localhost:4000/api/interviews/${interviewId}`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/interviews/${interviewId}`,
           { signal: controller.signal }
         );
 
@@ -84,11 +84,14 @@ function StartInterview() {
         mockInterviewQuestions={mockInterviewQuestions}
         activeQuestionIndex={activeQuestionIndex}
          />
-          <RecordAnswerSection
-          
-           mockInterviewQuestions={mockInterviewQuestions}
-        activeQuestionIndex={activeQuestionIndex}
-         />
+        <RecordAnswerSection
+  mockInterviewQuestions={mockInterviewQuestions}
+  activeQuestionIndex={activeQuestionIndex}
+  setActiveQuestionIndex={setActiveQuestionIndex}
+  interviewId={interviewId}
+/>
+
+
           
          
       </div>

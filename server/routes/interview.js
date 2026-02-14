@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/db.js';
 import { MockInterview } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { UserAnswer } from "../db/schema.js";
 
 const router = express.Router();
 
@@ -48,6 +49,35 @@ router.get('/:interviewId', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch interview' });
+  }
+});
+router.post("/save-answer", async (req, res) => {
+  try {
+    const {
+      mockIdRef,
+      question,
+      correctAns,
+      userAns,
+      feedback,
+      rating,
+      userEmail,
+    } = req.body;
+
+    await db.insert(UserAnswer).values({
+      mockIdRef,
+      question,
+      correctAns,
+      userAns,
+      feedback,
+      rating,
+      userEmail,
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({ message: "Answer saved successfully" });
+  } catch (error) {
+    console.error("Save Answer Error:", error);
+    res.status(500).json({ error: "Failed to save answer" });
   }
 });
 
