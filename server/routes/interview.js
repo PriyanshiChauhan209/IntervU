@@ -51,6 +51,22 @@ router.get('/:interviewId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch interview' });
   }
 });
+
+// GET: Fetch saved answers for a mock interview
+router.get('/answers/:mockId', async (req, res) => {
+  try {
+    const { mockId } = req.params;
+    const result = await db
+      .select()
+      .from(UserAnswer)
+      .where(eq(UserAnswer.mockIdRef, mockId));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Failed to fetch answers:', error);
+    res.status(500).json({ error: 'Failed to fetch answers' });
+  }
+});
 router.post("/save-answer", async (req, res) => {
   try {
     const {

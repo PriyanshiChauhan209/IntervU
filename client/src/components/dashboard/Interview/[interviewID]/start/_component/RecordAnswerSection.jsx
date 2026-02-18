@@ -3,22 +3,19 @@ import React, { useEffect, useState } from "react";
 import Webcam from "react-webcam";
 import { Mic, StopCircle } from "lucide-react";
 import useSpeechToText from "react-hook-speech-to-text";
-import { Button } from "@/components/ui/button"; // from shadcn-ui
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { sendMessage } from "@/lib/GeminiAiModel";
-import { useUser } from "@clerk/clerk-react"; 
+import { useUser } from "@clerk/clerk-react";
 
-
-function RecordAnswerSection({ 
-  mockInterviewQuestions, 
+function RecordAnswerSection({
+  mockInterviewQuestions,
   activeQuestionIndex,
-  setActiveQuestionIndex,
-  interviewId
+  interviewId,
 }) {
-  const { user } = useUser();  
+  const { user } = useUser();
   const [userAnswer, setUserAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-
 
   const {
     error,
@@ -35,20 +32,20 @@ function RecordAnswerSection({
   useEffect(() => {
     if (results.length > 0) {
       const latestResult = results[results.length - 1];
-      setUserAnswer((prevAns) => prevAns + " " + latestResult.transcript);
+      setUserAnswer((prev) => prev + " " + latestResult.transcript);
     }
   }, [results]);
 
-const SaveUserAnswer = async () => {
-  if (isRecording) {
-    stopSpeechToText();
+  const SaveUserAnswer = async () => {
+    if (isRecording) {
+      stopSpeechToText();
 
-    if (userAnswer?.length < 10) {
-      toast("Error while recording your message, Please try again");
-      return;
-    }
+      if (userAnswer?.length < 10) {
+        toast.error("Answer too short. Please try again.");
+        return;
+      }
 
-    const feedbackPrompt = `
+      const feedbackPrompt = `
 Question: ${mockInterviewQuestions[activeQuestionIndex]?.question}
 
 User Answer: ${userAnswer}
@@ -60,78 +57,54 @@ Return strictly valid JSON only:
 }
 `;
 
-    try {
-      setLoading(true); // 🔥 start loading
+      try {
+        setLoading(true);
 
-      const responseText = await sendMessage(feedbackPrompt);
+        const responseText = await sendMessage(feedbackPrompt);
 
-      const cleanedText = responseText
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+        const cleanedText = responseText
+          .replace(/```json/g, "")
+          .replace(/```/g, "")
+          .trim();
 
-      const mockJsonResp = JSON.parse(cleanedText);
+        const mockJsonResp = JSON.parse(cleanedText);
 
-      await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/interviews/save-answer`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mockIdRef: interviewId,
-            question: mockInterviewQuestions[activeQuestionIndex]?.question,
-            correctAns: mockInterviewQuestions[activeQuestionIndex]?.answer,
-            userAns: userAnswer,
-            feedback: mockJsonResp.feedback,
-            rating: String(mockJsonResp.rating),
-            userEmail: user?.primaryEmailAddress?.emailAddress,
-          }),
-        }
-      );
+        await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/interviews/save-answer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mockIdRef: interviewId,
+              question:
+                mockInterviewQuestions[activeQuestionIndex]?.question,
+              correctAns:
+                mockInterviewQuestions[activeQuestionIndex]?.answer,
+              userAns: userAnswer,
+              feedback: mockJsonResp.feedback,
+              rating: String(mockJsonResp.rating),
+              userEmail: user?.primaryEmailAddress?.emailAddress,
+            }),
+          }
+        );
 
-      toast.success("Answer recorded successfully ✅");
-      if (activeQuestionIndex < mockInterviewQuestions.length - 1) {
-  setActiveQuestionIndex(prev => prev + 1);
-}
-
-
-      setUserAnswer("");
-
-    } catch (err) {
-      console.error("Save Error:", err);
-      toast.error("Something went wrong. Try again.");
-    } finally {
-      setLoading(false); // 🔥 stop loading
+        toast.success("Answer saved successfully ✅");
+        setUserAnswer("");
+      } catch (err) {
+        console.error(err);
+        toast.error("Something went wrong.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      startSpeechToText();
     }
-
-  } else {
-    startSpeechToText();
-  }
-};
-
-const handleNext = () => {
-  if (activeQuestionIndex < mockInterviewQuestions.length - 1) {
-    setActiveQuestionIndex(prev => prev + 1);
-  }
-};
-
-const handlePrevious = () => {
-  if (activeQuestionIndex > 0) {
-    setActiveQuestionIndex(prev => prev - 1);
-  }
-};
-
-const handleEndInterview = () => {
-  toast.success("Interview Completed 🎉");
-  // later you can navigate to result page
-};
-
+  };
 
   return (
     <div className="flex flex-col items-center justify-center">
-      {/* Webcam container */}
-      <div className="flex flex-col mt-20 justify-center items-center bg-black rounded p-5 relative w-full max-w-3xl h-[400px] px-6">
-        {/* Placeholder image */}
+      {/* Webcam */}
+      <div className="flex flex-col mt-16 items-center bg-black rounded p-6 relative w-full max-w-3xl h-[380px]">
         <img
           src="/webcam.png"
           width={200}
@@ -140,79 +113,36 @@ const handleEndInterview = () => {
           className="absolute z-0"
         />
 
-        {/* Live webcam feed */}
         <Webcam
           audio={false}
-          mirrored={true}
+          mirrored
           className="rounded-lg object-cover z-10 w-full h-full"
         />
       </div>
 
-      {/* Buttons Section */}
-      {/* Buttons Section */}
-<div className="flex flex-col items-center mt-8 w-full">
+      {/* Record Button */}
+      <div className="mt-8 w-full max-w-3xl flex justify-center">
+        <Button
+  disabled={loading}
+  onClick={SaveUserAnswer}
+  className="w-1/3 bg-primaryDark hover:bg-primary text-white flex items-center justify-center gap-1 py-3 rounded-lg transition-all duration-200 active:scale-95"
+>
 
-  {/* Inner wrapper SAME width as webcam */}
-  <div className="w-full max-w-3xl flex flex-col items-center gap-6">
-
-    {/* Record Button */}
-    <Button
-      disabled={loading}
-      onClick={SaveUserAnswer}
-      className="w-3/4 bg-primary text-white hover:bg-primaryDark flex items-center justify-center gap-2 py-3 text-base font-semibold rounded-lg transition-all"
-    >
-      {loading ? (
-        "Saving..."
-      ) : isRecording ? (
-        <>
-          <StopCircle className="animate-pulse" />
-          Stop Recording
-        </>
-      ) : (
-        <>
-          <Mic />
-          Record Answer
-        </>
-      )}
-    </Button>
-
-    {/* Navigation Buttons */}
-    <div className="flex gap-4 w-3/4 justify-center">
-
-      <Button
-        variant="outline"
-        onClick={handlePrevious}
-        disabled={activeQuestionIndex === 0 || loading}
-        className="flex-1 border-primary text-primary hover:bg-primary hover:text-white transition-all"
-      >
-        Previous
-      </Button>
-
-      <Button
-        variant="outline"
-        onClick={handleNext}
-        disabled={
-          activeQuestionIndex === mockInterviewQuestions.length - 1 || loading
-        }
-        className="flex-1 border-primary text-primary hover:bg-primary hover:text-white transition-all"
-      >
-        Next
-      </Button>
-
-      <Button
-        onClick={handleEndInterview}
-        disabled={loading}
-        className="flex-1 bg-primary text-white hover:bg-primaryDark transition-all"
-      >
-        End Interview
-      </Button>
-
-    </div>
-
-  </div>
-</div>
-
-
+          {loading ? (
+            "Saving..."
+          ) : isRecording ? (
+            <>
+              <StopCircle className="animate-pulse" />
+              Stop Recording
+            </>
+          ) : (
+            <>
+              <Mic />
+              Record Answer
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
